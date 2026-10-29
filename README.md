@@ -1,2 +1,2 @@
 # ssm-parameter-store-pr
-Práctica de Secretos, Env y AWS System Manager Parameter Store
+Práctica para la gestión de secretos y variables de entorno en AWS System Manager Parameter Store

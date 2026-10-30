@@ -1,58 +1,64 @@
 # ssm-parameter-store-pr
 
-Práctica para subir y gestionar parámetros y variables de entorno en AWS Systems Manager Parameter Store.
+Práctica para subir y descargar variables de entorno en AWS Systems Manager Parameter Store.
 
-Antes de usar el proyecto, lee la guía. Ahí están el contexto y el paso a paso:
-
-[Gestión de secretos y variables de entorno en AWS Systems Manager Parameter Store](https://github.com/sakaramos/sakaramos/blob/main/posts/Gestion-de-secretos-y-variables-de-entorno-en-AWS-System-Manager-Parameter-Store.md)
+La guía, con el contexto y el paso a paso, está en [Gestión de secretos y variables de entorno en AWS Systems Manager Parameter Store](https://github.com/sakaramos/sakaramos/blob/main/posts/Gestion-de-secretos-y-variables-de-entorno-en-AWS-System-Manager-Parameter-Store.md).
 
 ## Requisitos
 
 - Python 3.14 instalado en tu máquina
-- Cuenta de AWS con acceso a Systems Manager Parameter Store
-- AWS configurado en tu máquina (credenciales y región)
-- boto3, el SDK de AWS para Python. El proyecto lo usa para llamar a Parameter Store con esas credenciales
-- La configuración de AWS está explicada en la guía
 
-## Bajar el repositorio
+## Instalación y ejecución
 
 ```bash
 git clone https://github.com/sakaramos/ssm-parameter-store-pr.git
 cd ssm-parameter-store-pr
-```
-
-## Uso
-
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+python scripts/download_parameters.py dev
+cp .env.dev .env
+set -a
+source .env
+set +a
 uvicorn app.main:app --reload
 ```
+
+`download_parameters.py` escribe `.env.dev` con lo que hay en Parameter Store. Esa descarga usa la configuración de AWS de la sección de abajo. `source .env` carga las variables en el ambiente. La API usa esas variables. No lee el archivo.
 
 - API: http://127.0.0.1:8000
 - Documentación: http://127.0.0.1:8000/docs
 - `GET /health` responde `{"status": "ok"}`
+- `GET /env` devuelve el ambiente y los nombres de las variables que encontró en el ambiente. No devuelve los valores
 
-## Subir variables
+`.env` no se sube al repositorio. `.env.example` es el archivo de ejemplo. La descarga escribe `.env.dev`.
 
-Primero configura AWS en tu máquina:
+## Parameter Store
+
+Para subir o descargar variables hace falta una cuenta de AWS con acceso a Systems Manager Parameter Store y AWS CLI configurado:
 
 ```bash
 aws configure
 ```
 
-Cómo hacerlo está en la [documentación oficial de AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) y en la guía de este proyecto.
+Cómo hacerlo está en la [documentación oficial](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html). El proyecto usa boto3, el SDK de AWS para Python, para llamar a Parameter Store con esa configuración.
 
-Con el repositorio clonado y el entorno virtual activo, sube o actualiza el ambiente `dev` pasándole la ruta del archivo:
+- Ambientes disponibles: `dev`
+- Prefijo: `/ssm-parameter-store-pr`
+- Cada variable queda en `/ssm-parameter-store-pr/dev/<CLAVE>`
+
+### Subir
 
 ```bash
 python scripts/upload_parameters.py .env.dev
 ```
 
-- Ambientes disponibles: `dev`
-- El archivo tiene que incluir `ENV=dev`
-- Prefijo configurado: `/ssm-parameter-store-pr`
-- Cada variable queda en `/ssm-parameter-store-pr/dev/<CLAVE>`
+El parámetro es la ruta del archivo. El archivo tiene que incluir `ENV=dev`. Si el parámetro ya existe, el valor se reemplaza. Si quitaste una variable del archivo, ese parámetro se borra en Parameter Store.
 
-Si vuelves a ejecutar el comando, los valores que siguen en el archivo se reemplazan. Si quitaste una variable del archivo, ese parámetro se borra en Parameter Store.
+### Descargar
+
+```bash
+python scripts/download_parameters.py dev
+```
+
+El parámetro es el ambiente. El script lee `/ssm-parameter-store-pr/dev` y escribe `.env.dev`. La primera línea es `ENV=dev`. Para usarlo en la API, cópialo a `.env` y cárgalo como en la instalación.
